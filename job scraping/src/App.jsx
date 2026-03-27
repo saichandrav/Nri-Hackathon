@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Scene from './components/Scene';
+import Navbar from './components/NavigationBar';
 import HeroPage from './pages/HeroPage';
 import AuthPage from './pages/AuthPage';
 import ProfilePage from './pages/ProfilePage';
@@ -16,6 +17,7 @@ const App = () => {
 
   return (
     <>
+      <Navbar />
       <Scene />
       
       <main className="ui-layer">
@@ -27,6 +29,16 @@ const App = () => {
 
           <Route
             path="/auth"
+            element={<AuthPage onAuthenticated={() => navigate('/profile')} />}
+          />
+
+          <Route
+            path="/login"
+            element={<AuthPage onAuthenticated={() => navigate('/profile')} />}
+          />
+
+          <Route
+            path="/signup"
             element={<AuthPage onAuthenticated={() => navigate('/profile')} />}
           />
 
