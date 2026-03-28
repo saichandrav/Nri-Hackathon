@@ -6,8 +6,10 @@ const resumeSchema = new mongoose.Schema({
   fileUrl: { type: String },
   extractedText: { type: String },
   skills: [{ type: String }],
-  isTailored: { type: Boolean, default: false },
+  markdownContent: { type: String }, // Tailored resume content from AI
+  isMaster: { type: Boolean, default: false },
   originalResume: { type: mongoose.Schema.Types.ObjectId, ref: 'Resume' },
+  job: { type: mongoose.Schema.Types.ObjectId, ref: 'Job' }, // The job this resume was tailored for
   createdAt: { type: Date, default: Date.now }
 });
 

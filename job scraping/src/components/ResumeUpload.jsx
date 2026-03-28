@@ -2,10 +2,15 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { UploadCloud, CheckCircle, FileText, Loader2, ArrowRight } from 'lucide-react';
 
+const API_BASE = 'http://localhost:8000/api/ai';
+
 const ResumeUpload = ({ onFinish }) => {
   const [file, setFile] = useState(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedSkills, setExtractedSkills] = useState([]);
+  const [resumeSaved, setResumeSaved] = useState(false);
+
+  const token = localStorage.getItem('token');
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -30,25 +35,53 @@ const ResumeUpload = ({ onFinish }) => {
     formData.append('file', file);
 
     try {
-      // Points to our local Python FastAPI backend
-      const response = await fetch('http://localhost:8000/api/extract-resume', {
+      const response = await fetch(`${API_BASE}/extract-resume`, {
         method: 'POST',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: formData,
       });
       
-      if (!response.ok) throw new Error('Extraction failed. Check if backend is running.');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Extraction failed. Check if backend is running.');
+      }
       const data = await response.json();
-      setExtractedSkills(data.skills || []);
+      setResumeSaved(true);
+
+      // Save the extracted full resume text to localStorage to skip the paste step in Dashboard
+      if (data.fullText) {
+        localStorage.setItem('resumeText', data.fullText);
+      }
+      // Save suggested role from AI logic to auto-fill Dashboard
+      if (data.suggestedRoles && data.suggestedRoles.length > 0) {
+        localStorage.setItem('targetRole', data.suggestedRoles[0]);
+      }
+
+      // Extract skills from AI response or fallback
+      const skills = data.skills?.length > 0 ? data.skills : extractSkillsFromText(data.textPreview || '');
+      setExtractedSkills(skills.length > 0 ? skills : ['Resume uploaded successfully']);
     } catch (error) {
       console.error('Extraction error:', error);
-      // Mock for now until the backend is fully connected
-      setTimeout(() => {
-        setExtractedSkills(['Python', 'Data Analysis', 'Machine Learning', 'SQL']);
-        setIsExtracting(false);
-      }, 1500);
-      return;
+      setExtractedSkills(['Error: ' + error.message]);
     } 
     setIsExtracting(false);
+  };
+
+  // Simple skill extraction from resume text
+  const extractSkillsFromText = (text) => {
+    const commonSkills = [
+      'JavaScript', 'Python', 'React', 'Node.js', 'TypeScript', 'Java', 'C++', 'SQL',
+      'MongoDB', 'PostgreSQL', 'AWS', 'Docker', 'Kubernetes', 'Git', 'REST API',
+      'Machine Learning', 'Data Analysis', 'HTML', 'CSS', 'Express', 'FastAPI',
+      'TensorFlow', 'PyTorch', 'Angular', 'Vue', 'Next.js', 'GraphQL', 'Redis',
+      'Linux', 'CI/CD', 'Agile', 'Scrum', 'Flutter', 'React Native', 'Swift',
+    ];
+    const found = commonSkills.filter(skill => 
+      text.toLowerCase().includes(skill.toLowerCase())
+    );
+    return found.slice(0, 8);
   };
 
   return (
@@ -64,7 +97,7 @@ const ResumeUpload = ({ onFinish }) => {
         </div>
         <div>
           <h3 className="profile-title">Upload Resume</h3>
-          <p className="profile-subtitle">We'll auto-extract your skills</p>
+          <p className="profile-subtitle">We'll save your master resume for AI tailoring</p>
         </div>
       </div>
 
@@ -79,7 +112,6 @@ const ResumeUpload = ({ onFinish }) => {
           id="resume-upload" 
           type="file" 
           accept="application/pdf" 
-          className="hidden" 
           style={{ display: 'none' }}
           onChange={handleFileSelect}
         />
@@ -93,18 +125,18 @@ const ResumeUpload = ({ onFinish }) => {
 
       <motion.button 
         className="btn-primary"
-        style={{ width: '100%', marginBottom: extractedSkills.length > 0 ? '1rem' : '0' }}
-        disabled={!file || isExtracting || extractedSkills.length > 0}
+        style={{ width: '100%', justifyContent: 'center', marginBottom: extractedSkills.length > 0 ? '1rem' : '0' }}
+        disabled={!file || isExtracting || resumeSaved}
         onClick={handleExtract}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
       >
         {isExtracting ? (
-          <><Loader2 className="animate-spin" size={20} style={{ display: 'inline', marginRight: '8px', marginBottom: '-4px' }}/> Extracting...</>
-        ) : extractedSkills.length > 0 ? (
-          <><CheckCircle size={20} style={{ display: 'inline', marginRight: '8px', marginBottom: '-4px' }}/> Extracted</>
+          <><Loader2 className="animate-spin" size={20} style={{ marginRight: '8px' }}/> Extracting & Saving...</>
+        ) : resumeSaved ? (
+          <><CheckCircle size={20} style={{ marginRight: '8px' }}/> Resume Saved</>
         ) : (
-          'Extract Skills'
+          'Upload & Extract Skills'
         )}
       </motion.button>
 

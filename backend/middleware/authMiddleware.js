@@ -6,15 +6,15 @@ const protect = async (req, res, next) => {
     try {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-      req.user = decoded.id; // Just storing ID for simplicity
-      next();
+      req.user = decoded.id;
+      return next();
     } catch (error) {
-      res.status(401).json({ error: 'Not authorized, token failed' });
+      return res.status(401).json({ error: 'Not authorized, token failed' });
     }
   }
 
   if (!token) {
-    res.status(401).json({ error: 'Not authorized, no token' });
+    return res.status(401).json({ error: 'Not authorized, no token' });
   }
 };
 

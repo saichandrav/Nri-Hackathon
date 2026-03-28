@@ -11,6 +11,11 @@ const userSchema = new mongoose.Schema({
   emailVerificationCodeHash: { type: String },
   emailVerificationExpiresAt: { type: Date },
   emailVerificationAttempts: { type: Number, default: 0 },
+
+  // AI Agent Data
+  masterResumeText: { type: String },
+  targetRole: { type: String },
+  location: { type: String },
 });
 
 module.exports = mongoose.model('User', userSchema);
