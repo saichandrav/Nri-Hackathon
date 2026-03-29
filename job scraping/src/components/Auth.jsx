@@ -81,11 +81,10 @@ const Auth = ({ onAuthenticated }) => {
 
   return (
     <motion.div 
-      className="profile-card"
-      style={{ width: '100%', maxWidth: '420px', margin: '0 auto', overflow: 'hidden', padding: '2.5rem' }}
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5, type: "spring" }}
+      className="w-full max-w-md mx-auto mt-10 p-8 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl overflow-hidden"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
     >
       <AnimatePresence mode="wait">
         
@@ -98,19 +97,19 @@ const Auth = ({ onAuthenticated }) => {
             exit={{ opacity: 0, x: 30 }}
             transition={{ duration: 0.4 }}
           >
-            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '16px', background: 'rgba(167, 139, 250, 0.1)', border: '1px solid rgba(167, 139, 250, 0.2)', marginBottom: '1rem' }}>
-                <Sparkles size={28} color="#a78bfa" />
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 mb-4">
+                <Sparkles size={28} className="text-blue-500" />
               </div>
-              <h2 className="title" style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>
+              <h2 className="text-2xl font-bold text-white mb-2">
                 {mode === 'login' ? 'Welcome Back' : 'Create Account'}
               </h2>
-              <p className="description" style={{ fontSize: '0.9rem' }}>
+              <p className="text-slate-400 text-sm">
                 {mode === 'login' ? 'Sign in to access your AI Dashboard' : 'Join the next generation of job searching'}
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               
               <AnimatePresence>
                 {mode === 'signup' && (
@@ -118,16 +117,15 @@ const Auth = ({ onAuthenticated }) => {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    style={{ overflow: 'hidden' }}
+                    className="overflow-hidden"
                   >
-                    <div style={{ position: 'relative' }}>
-                      <User size={18} color="#a1a1aa" style={{ position: 'absolute', top: '14px', left: '16px' }} />
+                    <div className="relative">
+                      <User size={18} className="absolute left-4 top-3.5 text-slate-500" />
                       <input 
                         type="text" 
                         required
-                        className="glass-input" 
+                        className="w-full bg-slate-950/50 border border-slate-700 rounded-lg py-3 pl-11 pr-4 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition-colors" 
                         placeholder="Full Name" 
-                        style={{ width: '100%', paddingLeft: '2.75rem' }}
                         value={formData.name}
                         onChange={(e) => setFormData({...formData, name: e.target.value})}
                       />
@@ -136,56 +134,50 @@ const Auth = ({ onAuthenticated }) => {
                 )}
               </AnimatePresence>
 
-              <div style={{ position: 'relative' }}>
-                <Mail size={18} color="#a1a1aa" style={{ position: 'absolute', top: '14px', left: '16px' }} />
+              <div className="relative">
+                <Mail size={18} className="absolute left-4 top-3.5 text-slate-500" />
                 <input 
                   type="email" 
                   required
-                  className="glass-input" 
+                  className="w-full bg-slate-950/50 border border-slate-700 rounded-lg py-3 pl-11 pr-4 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition-colors" 
                   placeholder="Email Address" 
-                  style={{ width: '100%', paddingLeft: '2.75rem' }}
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                 />
               </div>
 
-
-              <div style={{ position: 'relative' }}>
-                <Lock size={18} color="#a1a1aa" style={{ position: 'absolute', top: '14px', left: '16px' }} />
+              <div className="relative">
+                <Lock size={18} className="absolute left-4 top-3.5 text-slate-500" />
                 <input 
                   type="password" 
                   required
-                  className="glass-input" 
+                  className="w-full bg-slate-950/50 border border-slate-700 rounded-lg py-3 pl-11 pr-4 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-blue-500 transition-colors" 
                   placeholder="Password" 
-                  style={{ width: '100%', paddingLeft: '2.75rem' }}
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
                 />
               </div>
 
-              <motion.button 
+              <button 
                 type="submit"
-                className="btn-primary"
-                style={{ width: '100%', marginTop: '0.5rem', display: 'flex', justifyContent: 'center' }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3.5 text-base font-semibold text-white hover:bg-blue-700 transition-colors mt-2 disabled:opacity-50"
                 disabled={isLoading}
               >
                 {isLoading ? <Loader2 className="animate-spin" size={20} /> : (mode === 'login' ? 'Sign In' : 'Create Account')}
-              </motion.button>
+              </button>
             </form>
 
-            <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+            <div className="mt-6 text-center">
               {error && (
-                <p style={{ color: '#f87171', fontSize: '0.9rem', margin: '0 0 1rem 0' }}>
+                <p className="text-red-400 text-sm mb-4">
                   {error}
                 </p>
               )}
-              <p style={{ color: '#a1a1aa', fontSize: '0.875rem' }}>
+              <p className="text-slate-400 text-sm">
                 {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
                 <button 
                   onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-                  style={{ background: 'none', border: 'none', color: '#a78bfa', fontWeight: 'bold', cursor: 'pointer', padding: 0 }}
+                  className="text-blue-400 font-semibold hover:text-blue-300 focus:outline-none"
                 >
                   {mode === 'login' ? 'Sign up' : 'Sign in'}
                 </button>
@@ -203,19 +195,19 @@ const Auth = ({ onAuthenticated }) => {
             exit={{ opacity: 0, x: -30 }}
             transition={{ duration: 0.4 }}
           >
-            <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '16px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', marginBottom: '1rem' }}>
-                <ShieldCheck size={28} color="#10b981" />
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
+                <ShieldCheck size={28} className="text-emerald-500" />
               </div>
-              <h2 className="title" style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>Verify Account</h2>
-              <p className="description" style={{ fontSize: '0.9rem' }}>
-                We sent a 4-digit code to {formData.email || "your email"}.
+              <h2 className="text-2xl font-bold text-white mb-2">Verify Account</h2>
+              <p className="text-slate-400 text-sm">
+                We sent a 4-digit code to <span className="font-medium text-slate-300">{formData.email || "your email"}</span>.
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-8">
               
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+              <div className="flex justify-center gap-4">
                 {otp.map((digit, idx) => (
                   <input
                     key={idx}
@@ -226,41 +218,31 @@ const Auth = ({ onAuthenticated }) => {
                     value={digit}
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                    className="glass-input"
+                    className={`w-14 h-16 text-center text-2xl font-bold rounded-xl bg-slate-950/50 focus:outline-none transition-colors ${digit ? 'border-2 border-emerald-500 text-emerald-400' : 'border border-slate-700 text-white'}`}
                     required
-                    style={{ 
-                      width: '54px', height: '64px', fontSize: '1.5rem', 
-                      textAlign: 'center', padding: '0',
-                      border: digit ? '1px solid rgba(167, 139, 250, 0.6)' : '1px solid rgba(255, 255, 255, 0.1)',
-                      boxShadow: digit ? '0 0 10px rgba(167, 139, 250, 0.2)' : 'none',
-                      transition: 'all 0.2s ease-in-out'
-                    }}
                   />
                 ))}
               </div>
 
-              <motion.button 
+              <button 
                 type="submit"
-                className="btn-primary"
-                style={{ width: '100%', display: 'flex', justifyContent: 'center', backgroundColor: '#10b981' }}
-                whileHover={{ scale: 1.02, backgroundColor: '#059669' }}
-                whileTap={{ scale: 0.98 }}
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-6 py-3.5 text-base font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
                 disabled={isLoading || otp.join('').length < 4}
               >
-                {isLoading ? <Loader2 className="animate-spin" size={20} /> : <><ShieldCheck size={20} style={{ marginRight: '8px' }}/> Verify & Continue</>}
-              </motion.button>
+                {isLoading ? <Loader2 className="animate-spin" size={20} /> : <><ShieldCheck size={20} /> Verify & Continue</>}
+              </button>
             </form>
 
             {error && (
-              <p style={{ color: '#f87171', fontSize: '0.9rem', textAlign: 'center', marginTop: '-1rem' }}>
+              <p className="text-red-400 text-sm text-center mt-4">
                 {error}
               </p>
             )}
 
-            <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+            <div className="mt-8 text-center">
               <button 
                 onClick={() => { setError(''); setOtp(['', '', '', '']); setMode('signup'); }}
-                style={{ background: 'none', border: 'none', color: '#a1a1aa', fontSize: '0.875rem', cursor: 'pointer', padding: 0 }}
+                className="text-slate-400 text-sm hover:text-white transition-colors focus:outline-none"
               >
                 Change details or resend code
               </button>

@@ -1,24 +1,26 @@
 """
 Agent 1: The Job Scout
-Uses Exa Search to find relevant job postings based on the user's target role and location.
+Uses the scraper pipeline to find relevant job postings based on the user's target role and location.
 Uses LiteLLM + OpenRouter (Nemotron 3 Super) to analyze and rank results.
 """
 import json
-import litellm
+from openai import OpenAI
 from tools.exa_search_tool import search_jobs
 from config import OPENROUTER_API_KEY, OPENROUTER_MODEL
 
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=OPENROUTER_API_KEY,
+)
 
 def _call_llm(system_prompt: str, user_prompt: str) -> str:
-    """Call the OpenRouter LLM via LiteLLM."""
-    response = litellm.completion(
-        model=f"openrouter/{OPENROUTER_MODEL}",
+    """Call the OpenRouter LLM via OpenAI Client."""
+    response = client.chat.completions.create(
+        model=OPENROUTER_MODEL,
         messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
+            {"role": "system", "content": system_prompt}, 
+            {"role": "user", "content": user_prompt},     
         ],
-        api_key=OPENROUTER_API_KEY,
-        temperature=0.3,
         max_tokens=4000,
     )
     return response.choices[0].message.content
@@ -29,17 +31,17 @@ def run_scout(target_role: str, location: str) -> list[dict]:
     Run the Job Scout agent to find relevant jobs.
 
     This function:
-    1. Uses Exa Search to find raw job postings.
+    1. Uses the scraper pipeline to find raw job postings.
     2. Passes them through an LLM that filters and ranks the results.
     3. Returns a clean list of the top 5 jobs.
     """
     print(f"[Scout] Searching for '{target_role}' jobs in '{location}'...")
 
-    # Step 1: Get raw jobs from Exa Search
+    # Step 1: Get raw jobs from scraper pipeline
     raw_jobs = search_jobs(target_role, location, num_results=10)
 
     if not raw_jobs:
-        print("[Scout] No jobs found from Exa Search.")
+        print("[Scout] No jobs found from the scraper pipeline.")
         return []
 
     print(f"[Scout] Found {len(raw_jobs)} raw results. Asking LLM to analyze...")
@@ -92,5 +94,5 @@ def run_scout(target_role: str, location: str) -> list[dict]:
     except (json.JSONDecodeError, Exception) as e:
         print(f"[Scout] LLM parsing failed ({e}), falling back to raw results.")
 
-    # Fallback: return raw Exa results
+    # Fallback: return raw scraper results
     return raw_jobs[:5]

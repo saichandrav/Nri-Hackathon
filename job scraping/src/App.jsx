@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Scene from './components/Scene';
 import Navbar from './components/NavigationBar';
 import HeroPage from './pages/HeroPage';
 import AuthPage from './pages/AuthPage';
@@ -12,15 +11,15 @@ const App = () => {
   const navigate = useNavigate();
   const [profileSkills, setProfileSkills] = useState([]);
   const [resumeSkills, setResumeSkills] = useState([]);
-  
+  const isAuthenticated = Boolean(localStorage.getItem('token'));
+
   const allSkills = Array.from(new Set([...profileSkills, ...resumeSkills]));
 
   return (
-    <>
+    <div className="min-h-screen bg-slate-950 text-slate-50 font-sans antialiased overflow-x-hidden">
       <Navbar />
-      <Scene />
-      
-      <main className="ui-layer">
+
+      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col items-center justify-center min-h-[calc(100vh-80px)]">
         <Routes>
           <Route
             path="/"
@@ -52,36 +51,50 @@ const App = () => {
           <Route
             path="/profile"
             element={
-              <ProfilePage
-                onProfileSaved={(skills) => {
-                  if (skills) setProfileSkills(skills);
-                  navigate('/resume');
-                }}
-              />
+              isAuthenticated ? (
+                <ProfilePage
+                  onProfileSaved={(skills) => {
+                    if (skills) setProfileSkills(skills);
+                    navigate('/resume');
+                  }}
+                />
+              ) : (
+                <Navigate to="/login" replace />
+              )
             }
           />
 
           <Route
             path="/resume"
             element={
-              <ResumePage
-                onFinish={(skills) => {
-                  if (skills) setResumeSkills(skills);
-                  navigate('/dashboard');
-                }}
-              />
+              isAuthenticated ? (
+                <ResumePage
+                  onFinish={(skills) => {
+                    if (skills) setResumeSkills(skills);
+                    navigate('/dashboard');
+                  }}
+                />
+              ) : (
+                <Navigate to="/login" replace />
+              )
             }
           />
 
           <Route
             path="/dashboard"
-            element={<DashboardPage userSkills={allSkills} />}
+            element={
+              isAuthenticated ? (
+                <DashboardPage userSkills={allSkills} />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
           />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-    </>
+    </div>
   );
 };
 

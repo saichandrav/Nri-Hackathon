@@ -1,107 +1,156 @@
 /**
  * PDF Generator Utility
- * Converts Markdown resume content into a professional PDF file.
- * Uses Puppeteer (already installed) to render styled HTML to PDF.
+ * Generates resume PDFs.
+ * - If content is LaTeX, compile with a local LaTeX engine for exact template fidelity.
+ * - Otherwise render as plain text via Puppeteer.
  */
+const fs = require('fs/promises');
+const path = require('path');
+const os = require('os');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
 const puppeteer = require('puppeteer');
-const { marked } = require('marked');
+
+const execFileAsync = promisify(execFile);
+const LATEX_ENGINES = ['pdflatex', 'xelatex', 'lualatex'];
+
+const getLatexEngineCandidates = () => {
+  const localProgramFiles = process.env.LOCALAPPDATA || '';
+  const programFiles = process.env.ProgramFiles || '';
+  const programFilesX86 = process.env['ProgramFiles(x86)'] || '';
+
+  const miktexCandidates = [
+    path.join(localProgramFiles, 'Programs', 'MiKTeX', 'miktex', 'bin', 'x64', 'pdflatex.exe'),
+    path.join(localProgramFiles, 'Programs', 'MiKTeX', 'miktex', 'bin', 'x64', 'xelatex.exe'),
+    path.join(localProgramFiles, 'Programs', 'MiKTeX', 'miktex', 'bin', 'x64', 'lualatex.exe'),
+    path.join(programFiles, 'MiKTeX', 'miktex', 'bin', 'x64', 'pdflatex.exe'),
+    path.join(programFiles, 'MiKTeX', 'miktex', 'bin', 'x64', 'xelatex.exe'),
+    path.join(programFiles, 'MiKTeX', 'miktex', 'bin', 'x64', 'lualatex.exe'),
+    path.join(programFilesX86, 'MiKTeX', 'miktex', 'bin', 'pdflatex.exe'),
+    path.join(programFilesX86, 'MiKTeX', 'miktex', 'bin', 'xelatex.exe'),
+    path.join(programFilesX86, 'MiKTeX', 'miktex', 'bin', 'lualatex.exe'),
+  ];
+
+  return [...LATEX_ENGINES, ...miktexCandidates];
+};
+
+const isLatexDocument = (content) => /^\s*\\documentclass/.test(String(content || ''));
+
+const getLatexEngine = async () => {
+  for (const engine of getLatexEngineCandidates()) {
+    try {
+      await execFileAsync(engine, ['--version'], { timeout: 8000 });
+      return engine;
+    } catch {
+      // try next
+    }
+  }
+  return null;
+};
+
+const compileLatexToPdf = async (latexContent) => {
+  const engine = await getLatexEngine();
+  if (!engine) {
+    const error = new Error('LaTeX engine not found in PATH (pdflatex/xelatex/lualatex).');
+    error.code = 'LATEX_ENGINE_MISSING';
+    throw error;
+  }
+
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'resume-latex-'));
+  const texPath = path.join(tempDir, 'resume.tex');
+  const pdfPath = path.join(tempDir, 'resume.pdf');
+
+  try {
+    await fs.writeFile(texPath, String(latexContent || ''), 'utf8');
+
+    await execFileAsync(
+      engine,
+      ['-interaction=nonstopmode', '-halt-on-error', 'resume.tex'],
+      { cwd: tempDir, timeout: 120000, maxBuffer: 10 * 1024 * 1024 }
+    );
+
+    const pdfBuffer = await fs.readFile(pdfPath);
+    return pdfBuffer;
+  } catch (err) {
+    let logTail = '';
+    try {
+      const logText = await fs.readFile(path.join(tempDir, 'resume.log'), 'utf8');
+      logTail = logText.slice(-2500);
+    } catch {
+      // ignore
+    }
+
+    const compileError = new Error(
+      `LaTeX compilation failed. ${err.message}${logTail ? ` | log: ${logTail}` : ''}`
+    );
+    compileError.code = 'LATEX_COMPILE_FAILED';
+    throw compileError;
+  } finally {
+    try {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    } catch {
+      // ignore cleanup issues
+    }
+  }
+};
+
+const escapeHtml = (value) =>
+  String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
 /**
- * Convert a Markdown string to a styled PDF buffer.
- * @param {string} markdownContent - The tailored resume in Markdown format.
+ * Convert resume text to a layout-preserving PDF buffer.
+ * @param {string} resumeContent - The tailored resume text.
  * @param {string} candidateName - Name for the PDF header.
  * @returns {Promise<Buffer>} - The PDF file as a buffer.
  */
-async function generateResumePDF(markdownContent, candidateName = 'Candidate') {
-  // Convert Markdown to HTML
-  const htmlBody = marked(markdownContent);
+async function generateResumePDF(resumeContent, candidateName = 'Candidate') {
+  if (isLatexDocument(resumeContent)) {
+    return compileLatexToPdf(resumeContent);
+  }
 
-  // Professional resume HTML template
+  const safeResumeText = escapeHtml(String(resumeContent || '').trim());
+  const safeName = escapeHtml(candidateName);
+
+  // Plain-text HTML template to preserve source layout and spacing.
   const fullHTML = `
   <!DOCTYPE html>
   <html>
   <head>
     <meta charset="UTF-8">
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
       * { margin: 0; padding: 0; box-sizing: border-box; }
 
       body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-family: 'Segoe UI', Arial, sans-serif;
         font-size: 11pt;
-        line-height: 1.6;
+        line-height: 1.35;
         color: #1a1a1a;
-        padding: 40px 50px;
-        max-width: 800px;
-        margin: 0 auto;
+        padding: 26px 28px;
       }
 
-      h1 {
-        font-size: 22pt;
-        font-weight: 700;
-        color: #111827;
-        margin-bottom: 4px;
-        border-bottom: 2px solid #2563eb;
-        padding-bottom: 8px;
+      .name {
+        font-size: 0;
       }
 
-      h2 {
-        font-size: 13pt;
-        font-weight: 600;
-        color: #2563eb;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-top: 18px;
-        margin-bottom: 8px;
-        border-bottom: 1px solid #e5e7eb;
-        padding-bottom: 4px;
-      }
-
-      h3 {
-        font-size: 11.5pt;
-        font-weight: 600;
-        color: #1f2937;
-        margin-top: 10px;
-        margin-bottom: 2px;
-      }
-
-      p {
-        margin-bottom: 6px;
-        color: #374151;
-      }
-
-      ul {
-        margin-left: 18px;
-        margin-bottom: 8px;
-      }
-
-      li {
-        margin-bottom: 4px;
-        color: #374151;
-      }
-
-      strong { font-weight: 600; color: #111827; }
-      em { font-style: italic; color: #4b5563; }
-
-      a {
-        color: #2563eb;
-        text-decoration: none;
-      }
-
-      /* Skills tags inline */
-      code {
-        background: #eff6ff;
-        color: #1d4ed8;
-        padding: 1px 6px;
-        border-radius: 3px;
-        font-size: 10pt;
-        font-family: 'Inter', sans-serif;
+      pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-size: 11pt;
+        line-height: 1.35;
+        color: #1a1a1a;
       }
     </style>
   </head>
   <body>
-    ${htmlBody}
+    <div class="name">${safeName}</div>
+    <pre>${safeResumeText}</pre>
   </body>
   </html>
   `;

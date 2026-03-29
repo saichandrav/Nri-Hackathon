@@ -28,6 +28,7 @@ You must have the following installed to run this project:
 *   [Node.js](https://nodejs.org/) (v16+)
 *   [Python 3.10+](https://www.python.org/)
 *   [MongoDB URI](https://www.mongodb.com/cloud/atlas) (Local or Atlas)
+*   [MiKTeX / TeX Live](https://miktex.org/download) with `pdflatex` in PATH (required for exact LaTeX-template PDF output)
 *   [OpenRouter API Key](https://openrouter.ai/) for the LLM Model.
 *   [Exa API Key](https://exa.ai/) for live Web Job Search.
 

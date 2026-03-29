@@ -1,100 +1,226 @@
-# Implementation Plan: Autonomous Job Hunter (CrewAI + MERN)
+# Implementation Plan: JobSpy-First Migration (Phase-Wise)
 
-This document outlines the four phases of building the "Autonomous Job Hunter" SaaS application. Each phase includes clear "Status Checkpoints" to verify functionality.
+This plan implements the new search pipeline in phases and shows exactly where to verify each phase is working.
 
-> [!IMPORTANT]
-> **Local Environment:** Both the Node.js (Port 8000) and Python FastAPI (Port 8001) servers will run concurrently on your local machine.
+Priority order:
+1. JobSpy (main)
+2. Selenium Naukri fallback
+3. BeautifulSoup fallback/enrichment
 
----
-
-## Phase 1: The AI Engine (Python FastAPI) ✅ DONE
-
-### Files Created:
-- `python_ai/main.py` — FastAPI server with `/api/start-scout` and `/api/tailor-resume`
-- `python_ai/config.py` — Loads API keys from `.env`
-- `python_ai/agents/scout_agent.py` — Agent 1: Job Scout (CrewAI + Exa Search)
-- `python_ai/agents/tailor_agent.py` — Agent 2: Resume Tailor (CrewAI + OpenRouter)
-- `python_ai/tools/exa_search_tool.py` — Exa neural search wrapper
-- `python_ai/requirements.txt` — Python dependencies
-- `python_ai/.env.example` — API key template
-
----
-
-## Phase 2: Node.js Backend & Data Flow ✅ DONE
-
-### Files Modified/Created:
-- `backend/controllers/aiController.js` — Rewritten to call Python API via axios
-- `backend/routes/aiRoutes.js` — Updated with all new endpoints
-- `backend/utils/pdfGenerator.js` — Markdown-to-PDF using Puppeteer
-- `backend/.env.example` — Updated with Python API URL
-- `backend/models/User.js` — Added masterResumeText, targetRole, location
-- `backend/models/Job.js` — Added jobType, scrapedFrom
-- `backend/models/Resume.js` — Added markdownContent, isMaster, job reference
+## Current Progress
+- [x] Phase 1: JobSpy-first search tool integrated
+- [x] Phase 2: Selenium fallback path added in search tool
+- [x] Phase 3: BeautifulSoup fallback path added in search tool
+- [x] Phase 4: Freshness filtering and dedupe added
+- [x] Phase 5: Scout agent wording and fallback messages updated
+- [x] Phase 6: Python dependencies/config updated (Exa removed)
+- [x] Phase 7: Backend timeout/error messaging updated
+- [x] Phase 8: Frontend loading text updated for slower sources
+- [x] Phase 9: Full runtime verification pending
 
 ---
 
-## Phase 3: React Frontend Dashboard ✅ DONE
+## Phase 0: Baseline Contract Lock
+### Goal
+Keep scout contract unchanged while replacing internals.
 
-### Files Modified:
-- `job scraping/src/components/Dashboard.jsx` — Complete rewrite with:
-  - AI Job Scout search bar (target role + location)
-  - Job cards with company, location, source platform
-  - Expandable job descriptions
-  - "Tailor Resume" button on each job card
-  - "Apply" link to original posting
-  - Resume preview modal with Markdown display
-  - PDF download button
+### Where implemented
+- `python_ai/main.py`
+- `backend/controllers/aiController.js`
+
+### Working check
+1. Call `POST /api/start-scout` via backend route `POST /api/ai/scout-jobs`.
+2. Confirm response includes: `success`, `jobs`, `count`.
+3. Confirm each job includes: `title`, `company`, `url`, `location`, `description`, `scrapedFrom`.
+
+### Not working if
+1. Any key above is missing or renamed.
 
 ---
 
-## Phase 4: Verification & Running Locally
+## Phase 1: JobSpy as Main Engine
+### Goal
+Use JobSpy as default retrieval path.
 
-### How to Run (3 Terminals):
+### Where implemented
+- `python_ai/tools/exa_search_tool.py`
 
-#### Terminal 1: Python AI Engine
+### Working check
+1. Start Python service.
+2. Trigger scout from UI.
+3. Confirm jobs return even with no Exa key configured.
+
+### Not working if
+1. Scout depends on Exa variables/packages.
+2. Common searches return empty due to primary path failure.
+
+---
+
+## Phase 2: Selenium Naukri Fallback
+### Goal
+Use Selenium only when JobSpy is insufficient.
+
+### Where implemented
+- `python_ai/tools/exa_search_tool.py` (`_search_with_naukri_selenium`)
+
+### Working check
+1. Run a Naukri-heavy query where JobSpy underperforms.
+2. Confirm additional results include `scrapedFrom: Naukri`.
+
+### Not working if
+1. Selenium runs for every request.
+2. Selenium causes hard failure instead of graceful fallback.
+
+---
+
+## Phase 3: BeautifulSoup Fallback
+### Goal
+Use BS4 as final fallback for public pages.
+
+### Where implemented
+- `python_ai/tools/exa_search_tool.py` (`_search_with_linkedin_bs4`)
+
+### Working check
+1. Trigger scout where results are still low after JobSpy/Selenium.
+2. Confirm fallback results appear with valid title/url fields.
+
+### Not working if
+1. BS4 exceptions crash the whole request.
+
+---
+
+## Phase 4: Freshness + Dedupe
+### Goal
+Prioritize recent jobs and reduce duplicates.
+
+### Where implemented
+- `python_ai/tools/exa_search_tool.py` (`_apply_freshness_policy`, `_dedupe_jobs`)
+
+### Working check
+1. Confirm older than 7 days are excluded by default.
+2. Confirm undated entries appear only when needed.
+3. Confirm duplicate URLs are removed.
+
+### Not working if
+1. Old jobs dominate top results.
+2. Duplicate cards appear in dashboard for same job URL.
+
+---
+
+## Phase 5: Ranking Layer Stability
+### Goal
+Keep OpenRouter ranking behavior unchanged.
+
+### Where implemented
+- `python_ai/agents/scout_agent.py`
+
+### Working check
+1. Scout still returns ranked top jobs.
+2. If LLM parsing fails, fallback returns raw jobs.
+
+### Not working if
+1. Ranking output breaks expected job keys.
+
+---
+
+## Phase 6: Config and Dependency Migration
+### Goal
+Remove Exa dependency and adopt scraper stack.
+
+### Where implemented
+- `python_ai/requirements.txt`
+- `python_ai/config.py`
+- `python_ai/.env.example`
+
+### Working check
+1. `pip install -r requirements.txt` succeeds.
+2. Python server starts without Exa package/key.
+
+### Not working if
+1. Import errors for `jobspy`, `bs4`, or `selenium`.
+
+---
+
+## Phase 7: Backend Timeout and Error Handling
+### Goal
+Handle slower fallback scraping without premature timeout.
+
+### Where implemented
+- `backend/controllers/aiController.js`
+
+### Working check
+1. Scout requests can run up to 4 minutes.
+2. Error message mentions slower scraper behavior when failures happen.
+
+### Not working if
+1. Requests still time out too early.
+
+---
+
+## Phase 8: Frontend UX Messaging
+### Goal
+Set realistic loading expectation for users.
+
+### Where implemented
+- `job scraping/src/components/Dashboard.jsx`
+
+### Working check
+1. During scout, button text shows longer expected wait.
+
+### Not working if
+1. UI still shows generic quick-scan wording only.
+
+---
+
+## Phase 9: End-to-End Validation (Run Now)
+### Goal
+Verify full flow is stable.
+
+### Run in 3 terminals
+#### Terminal 1: Python
 ```bash
 cd python_ai
 pip install -r requirements.txt
-# Copy .env.example to .env and add your API keys
 copy .env.example .env
-# Edit .env with your EXA_API_KEY and OPENROUTER_API_KEY
+# add OPENROUTER_API_KEY
 python main.py
-# Should show: "Starting AI Engine on http://localhost:8001"
 ```
 
-#### Terminal 2: Node.js Backend
+#### Terminal 2: Node
 ```bash
 cd backend
 npm install
-# Copy .env.example to .env and add your keys
 copy .env.example .env
-# Edit .env with your MONGO_URI, JWT_SECRET, etc.
 npm start
-# Should show: "Server running on port 8000"
 ```
 
-#### Terminal 3: React Frontend
+#### Terminal 3: Frontend
 ```bash
 cd "job scraping"
 npm install
 npm run dev
-# Should show: "Local: http://localhost:5173"
 ```
 
-### Verification Checklist:
-- [ ] Python server responds at `http://localhost:8001` with health check
-- [ ] Node.js server responds at `http://localhost:8000` with health check
-- [ ] React app loads at `http://localhost:5173`
-- [ ] Scout search returns job cards in the dashboard
-- [ ] "Tailor Resume" generates a tailored Markdown preview
-- [ ] "Download as PDF" produces a professional resume PDF
+### End-to-end checks
+1. Health checks:
+   - `http://localhost:8001`
+   - `http://localhost:8000`
+2. Login and open dashboard.
+3. Run scout with role/location.
+4. Confirm jobs are saved and rendered.
+5. Confirm tailor flow still works.
+
+### Pass criteria
+1. Job results returned with correct schema.
+2. No Exa dependency required.
+3. Dashboard remains functional.
 
 ---
 
-## Technical Stack Summary
-*   **AI Search:** Exa Search API (`exa_py`)
-*   **LLM Provider:** OpenRouter
-*   **AI Framework:** CrewAI + LangChain
-*   **Bridge:** FastAPI (Python) ↔ Express (Node.js)
-*   **Database:** MongoDB (Mongoose)
-*   **Frontend:** Vite + React + Tailwind CSS
+## Final Release Checklist
+- [x] Exa removed from Python dependency/config path
+- [x] JobSpy-first retrieval wired
+- [x] Selenium + BS4 fallback paths wired
+- [x] Backend timeout increased
+- [x] Frontend slow-source loading text updated
+- [ ] Full runtime validation completed on local machine

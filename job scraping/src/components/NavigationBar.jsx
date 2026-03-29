@@ -53,7 +53,7 @@ const Navbar = () => {
             {!isLoggedIn && (
               <Link
                 to="/login"
-                className="rounded-xl border btn-primary border-white/55 px-4 py-1.5 text-[15px] font-medium text-white hover:border-white hover:bg-white/10 transition"
+                className="rounded-lg border border-slate-700 px-4 py-1.5 text-[15px] font-medium text-white hover:bg-slate-800 transition"
               >
                 Get Started
               </Link>
@@ -62,16 +62,14 @@ const Navbar = () => {
             {isLoggedIn && (
               <Link
                 to="/profile"
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-linear-to-r from-blue-400 to-orange-700 hover:opacity-85 transition"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 transition"
                 title="Profile"
               >
-                <User className="text-white" />
+                <User size={18} className="text-white" />
               </Link>
             )}
-
           </div>
 
-          {/* MOBILE MENU BUTTON */}
           <div className="flex xl:hidden">
             <button
               onClick={toggleNavbar}
@@ -92,8 +90,8 @@ const Navbar = () => {
             />
 
             {/* DRAWER */}
-            <div className="fixed left-0 top-20 z-40 w-full border-t border-white/10 bg-black/95 p-8 xl:hidden">
-              <ul className="space-y-2 text-center text-lg text-white/90">
+            <div className="fixed left-0 top-18 z-40 w-full border-t border-slate-800 bg-slate-950 p-8 xl:hidden">
+              <ul className="space-y-2 text-center text-lg text-slate-300">
                 {navItems.map((item, index) => (
                   <li key={index} className="py-4">
                     <NavLink
@@ -102,7 +100,7 @@ const Navbar = () => {
                       className={({ isActive }) =>
                         isActive
                           ? "text-white font-semibold no-underline"
-                          : "text-white/90 no-underline hover:text-white"
+                          : "text-slate-300 no-underline hover:text-white"
                       }
                     >
                       {item.label}
@@ -112,14 +110,14 @@ const Navbar = () => {
               </ul>
 
               {/* MOBILE ACTIONS */}
-              <div className="mt-6 flex items-center justify-center gap-4">
-                
+              <div className="mt-6 flex flex-col items-center justify-center gap-4">
+
                 {!isLoggedIn && (
                   <>
                     <Link
                       to="/login"
                       onClick={() => setMobileDrawerOpen(false)}
-                      className="rounded-xl border border-white/55 px-5 py-2 text-base font-medium text-white"
+                      className="w-full text-center rounded-lg border border-slate-700 px-5 py-2.5 text-base font-medium text-white hover:bg-slate-800"
                     >
                       Sign In
                     </Link>
@@ -127,7 +125,7 @@ const Navbar = () => {
                     <Link
                       to="/signup"
                       onClick={() => setMobileDrawerOpen(false)}
-                      className="rounded-xl bg-linear-to-r from-orange-500 to-orange-800 px-5 py-2.5 text-base font-medium text-white"
+                      className="w-full text-center rounded-lg bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-base font-medium text-white"
                     >
                       Create Account
                     </Link>
@@ -138,15 +136,12 @@ const Navbar = () => {
                   <Link
                     to="/profile"
                     onClick={() => setMobileDrawerOpen(false)}
-                    className="flex h-11 w-11 items-center justify-center rounded-full bg-linear-to-r from-blue-400 to-orange-700"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600"
                   >
-                    <User className="text-white" />
+                    <User size={20} className="text-white" />
                   </Link>
                 )}
 
-                <Link to="/cart">
-                  <ShoppingCart className="h-7 w-7 text-white/90" />
-                </Link>
               </div>
             </div>
           </>

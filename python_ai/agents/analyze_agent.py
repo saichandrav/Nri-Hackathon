@@ -1,13 +1,18 @@
-import litellm
+from openai import OpenAI
 import json
 from config import OPENROUTER_API_KEY, OPENROUTER_MODEL
+
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=OPENROUTER_API_KEY,
+)
 
 def run_analyze(resume_text: str) -> dict:
     """
     Analyze the uploaded resume to extract skills and suggest target roles.
-    Uses LiteLLM + OpenRouter (Nemotron 3 Super).
+    Uses OpenAI Client + OpenRouter (Nemotron 3 Super).
     """
-    print("[Analyzer] Analyzing uploaded resume...")
+    print("[Analyzer] Analyzing uploaded resume...")      
 
     system_prompt = (
         "You are an expert ATS and recruitment AI. Your job is to analyze a raw resume text "
@@ -16,15 +21,14 @@ def run_analyze(resume_text: str) -> dict:
         "Output ONLY valid JSON. No markdown fences, no explanations."
     )
 
-    user_prompt = f"Resume Text:\n{resume_text[:4000]}"
+    user_prompt = f"Resume Text:\n{resume_text[:4000]}"   
 
-    response = litellm.completion(
-        model=f"openrouter/{OPENROUTER_MODEL}",
+    response = client.chat.completions.create(
+        model=OPENROUTER_MODEL,
         messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
+            {"role": "system", "content": system_prompt}, 
+            {"role": "user", "content": user_prompt},     
         ],
-        api_key=OPENROUTER_API_KEY,
         temperature=0.2,
         max_tokens=500,
     )

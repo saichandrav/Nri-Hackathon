@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { UploadCloud, CheckCircle, FileText, Loader2, ArrowRight } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8000/api/ai';
@@ -29,7 +29,13 @@ const ResumeUpload = ({ onFinish }) => {
 
   const handleExtract = async () => {
     if (!file) return;
+    if (!token) {
+      setExtractedSkills(['Error: Please login first, then upload your resume.']);
+      return;
+    }
+
     setIsExtracting(true);
+    setExtractedSkills([]);
     
     const formData = new FormData();
     formData.append('file', file);
@@ -59,8 +65,8 @@ const ResumeUpload = ({ onFinish }) => {
         localStorage.setItem('targetRole', data.suggestedRoles[0]);
       }
 
-      // Extract skills from AI response or fallback
-      const skills = data.skills?.length > 0 ? data.skills : extractSkillsFromText(data.textPreview || '');
+      // Extract skills from AI response or fallback against full extracted text
+      const skills = data.skills?.length > 0 ? data.skills : extractSkillsFromText(data.fullText || data.textPreview || '');
       setExtractedSkills(skills.length > 0 ? skills : ['Resume uploaded successfully']);
     } catch (error) {
       console.error('Extraction error:', error);
@@ -86,24 +92,23 @@ const ResumeUpload = ({ onFinish }) => {
 
   return (
     <motion.div 
-      className="profile-card"
+      className="max-w-xl mx-auto mt-10 p-8 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="profile-header">
-        <div className="avatar-placeholder">
-          <FileText size={24} color="#a78bfa" />
+      <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500">
+          <FileText size={24} />
         </div>
         <div>
-          <h3 className="profile-title">Upload Resume</h3>
-          <p className="profile-subtitle">We'll save your master resume for AI tailoring</p>
+          <h3 className="text-2xl font-bold text-white">Upload Resume</h3>
+          <p className="text-sm text-slate-400">We'll save your master resume for AI tailoring</p>
         </div>
       </div>
 
       <div 
-        className="upload-zone glass-input"
-        style={{ padding: '2rem', textAlign: 'center', borderStyle: 'dashed', cursor: 'pointer', marginBottom: '1rem', borderRadius: '12px' }}
+        className={`p-10 text-center border-2 border-dashed rounded-xl cursor-pointer mb-6 transition-colors ${file ? 'border-emerald-500 bg-emerald-500/5' : 'border-slate-700 bg-slate-950/50 hover:border-slate-500'}`}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
         onClick={() => document.getElementById('resume-upload').click()}
@@ -112,57 +117,56 @@ const ResumeUpload = ({ onFinish }) => {
           id="resume-upload" 
           type="file" 
           accept="application/pdf" 
-          style={{ display: 'none' }}
+          className="hidden"
           onChange={handleFileSelect}
         />
-        <UploadCloud size={48} color={file ? "#10b981" : "#a78bfa"} style={{ margin: '0 auto 1rem' }}/>
+        <UploadCloud size={48} className={`mx-auto mb-4 ${file ? 'text-emerald-500' : 'text-slate-500'}`} />
         {file ? (
-          <p style={{ color: '#fff', fontWeight: '500' }}>{file.name}</p>
+          <p className="text-emerald-400 font-medium">{file.name}</p>
         ) : (
-          <p style={{ color: '#a1a1aa' }}>Drag & drop your PDF resume here, or click to browse</p>
+          <p className="text-slate-400">Drag & drop your PDF resume here, or click to browse</p>
         )}
       </div>
 
-      <motion.button 
-        className="btn-primary"
-        style={{ width: '100%', justifyContent: 'center', marginBottom: extractedSkills.length > 0 ? '1rem' : '0' }}
+      <button 
+        className={`w-full flex items-center justify-center gap-2 rounded-lg px-6 py-3.5 text-base font-semibold text-white transition-colors disabled:opacity-50 ${resumeSaved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'}`}
         disabled={!file || isExtracting || resumeSaved}
         onClick={handleExtract}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
       >
         {isExtracting ? (
-          <><Loader2 className="animate-spin" size={20} style={{ marginRight: '8px' }}/> Extracting & Saving...</>
+          <><Loader2 className="animate-spin" size={20} /> Extracting & Saving...</>
         ) : resumeSaved ? (
-          <><CheckCircle size={20} style={{ marginRight: '8px' }}/> Resume Saved</>
+          <><CheckCircle size={20} /> Resume Saved</>
         ) : (
           'Upload & Extract Skills'
         )}
-      </motion.button>
+      </button>
 
       {extractedSkills.length > 0 && (
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
+          className="mt-8"
         >
-          <div className="form-group" style={{ marginTop: '0.5rem' }}>
-            <label><CheckCircle size={16} color="#10b981" /> Discovered Skills</label>
-            <div className="skills-container" style={{ marginTop: '0.5rem' }}>
+          <div className="mb-6">
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-300 uppercase tracking-wide mb-3">
+              <CheckCircle size={16} className="text-emerald-500" /> Discovered Skills
+            </label>
+            <div className="flex flex-wrap gap-2">
               {extractedSkills.map((skill, idx) => (
-                <span key={idx} className="skill-tag" style={{ border: '1px solid rgba(16, 185, 129, 0.2)' }}>{skill}</span>
+                <span key={idx} className="px-3 py-1.5 bg-slate-800 text-emerald-400 text-sm rounded-md border border-emerald-500/20">
+                  {skill}
+                </span>
               ))}
             </div>
           </div>
           
-          <motion.button 
-            className="btn-secondary"
-            style={{ width: '100%', marginTop: '1rem' }}
+          <button 
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-slate-800 border border-slate-700 px-6 py-3.5 text-base font-semibold text-white hover:bg-slate-700 transition-colors"
             onClick={() => onFinish(extractedSkills)}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
           >
-            Continue to Dashboard <ArrowRight size={18} style={{ display: 'inline', marginLeft: '6px', marginBottom: '-4px' }}/>
-          </motion.button>
+            Continue to Dashboard <ArrowRight size={18} />
+          </button>
         </motion.div>
       )}
     </motion.div>

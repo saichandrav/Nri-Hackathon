@@ -25,41 +25,43 @@ const UserProfile = ({ onProfileSaved }) => {
 
   return (
     <motion.div 
-      className="profile-card"
-      initial={{ opacity: 0, x: 50, scale: 0.95 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      transition={{ duration: 0.8, delay: 0.6, type: "spring", bounce: 0.4 }}
+      className="max-w-xl mx-auto mt-10 p-8 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
     >
-      <div className="profile-header">
-        <div className="avatar-placeholder">
-          <Sparkles size={24} color="#a78bfa" />
+      <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500">
+          <Sparkles size={24} />
         </div>
         <div>
-          <h3 className="profile-title">Setup Profile</h3>
-          <p className="profile-subtitle">Tailor your AI job search</p>
+          <h3 className="text-2xl font-bold text-white">Setup Profile</h3>
+          <p className="text-sm text-slate-400">Tailor your AI job search</p>
         </div>
       </div>
 
-      <div className="form-group">
-        <label><Briefcase size={16} /> Target Role</label>
-        <div className="select-wrapper">
-          <select value={role} onChange={(e) => setRole(e.target.value)} className="glass-input">
-            <option value="Machine Learning Engineer">Machine Learning Engineer</option>
-            <option value="Frontend Developer">Frontend Developer</option>
-            <option value="Backend Developer">Backend Developer</option>
-            <option value="Data Scientist">Data Scientist</option>
-            <option value="Full Stack Engineer">Full Stack Engineer</option>
-          </select>
-        </div>
+      <div className="mb-6">
+        <label className="flex items-center gap-2 text-sm font-semibold text-slate-300 uppercase tracking-wide mb-2"><Briefcase size={16} /> Target Role</label>
+        <select 
+          value={role} 
+          onChange={(e) => setRole(e.target.value)} 
+          className="w-full bg-slate-950/50 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:border-blue-500"
+        >
+          <option value="Machine Learning Engineer">Machine Learning Engineer</option>
+          <option value="Frontend Developer">Frontend Developer</option>
+          <option value="Backend Developer">Backend Developer</option>
+          <option value="Data Scientist">Data Scientist</option>
+          <option value="Full Stack Engineer">Full Stack Engineer</option>
+        </select>
       </div>
 
-      <div className="form-group">
-        <label><GraduationCap size={16} /> Experience Level</label>
-        <div className="radio-group">
+      <div className="mb-6">
+        <label className="flex items-center gap-2 text-sm font-semibold text-slate-300 uppercase tracking-wide mb-2"><GraduationCap size={16} /> Experience Level</label>
+        <div className="flex gap-2">
           {['Entry', 'Intermediate', 'Senior'].map(level => (
             <div 
               key={level} 
-              className={`radio-badge ${experience === level ? 'active' : ''}`}
+              className={`cursor-pointer px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${experience === level ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-500'}`}
               onClick={() => setExperience(level)}
             >
               {level}
@@ -68,21 +70,21 @@ const UserProfile = ({ onProfileSaved }) => {
         </div>
       </div>
 
-      <div className="form-group">
-        <label><Code2 size={16} /> Core Skills</label>
-        <div className="skills-container">
+      <div className="mb-8">
+        <label className="flex items-center gap-2 text-sm font-semibold text-slate-300 uppercase tracking-wide mb-2"><Code2 size={16} /> Core Skills</label>
+        <div className="flex flex-wrap gap-2 p-3 bg-slate-950/50 border border-slate-700 rounded-lg min-h-[100px] content-start">
           <AnimatePresence>
             {skills.map(skill => (
               <motion.div 
                 key={skill} 
-                className="skill-tag"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-slate-200 text-sm rounded-md border border-slate-700"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.5 }}
                 layout
               >
                 {skill}
-                <button onClick={() => removeSkill(skill)}><X size={12} /></button>
+                <button onClick={() => removeSkill(skill)} className="text-slate-400 hover:text-white"><X size={14} /></button>
               </motion.div>
             ))}
           </AnimatePresence>
@@ -92,15 +94,13 @@ const UserProfile = ({ onProfileSaved }) => {
             value={skillInput}
             onChange={(e) => setSkillInput(e.target.value)}
             onKeyDown={addSkill}
-            className="glass-input skill-input"
+            className="flex-1 min-w-[120px] bg-transparent text-slate-200 text-sm focus:outline-none px-2 py-1"
           />
         </div>
       </div>
 
-      <motion.button 
-        className="btn-secondary"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+      <button 
+        className="w-full flex items-center justify-center gap-2 rounded-lg bg-slate-800 border border-slate-700 px-6 py-3.5 text-base font-semibold text-white hover:bg-slate-700 transition-colors disabled:opacity-50"
         onClick={async () => {
           setIsLoading(true);
           try {
@@ -118,7 +118,7 @@ const UserProfile = ({ onProfileSaved }) => {
         disabled={isLoading}
       >
         {isLoading ? 'Saving...' : 'Save Profile'}
-      </motion.button>
+      </button>
     </motion.div>
   );
 };

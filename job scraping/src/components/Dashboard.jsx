@@ -22,7 +22,6 @@ const Dashboard = ({ userSkills }) => {
   const [previewJobTitle, setPreviewJobTitle] = useState('');
   const [previewResumeId, setPreviewResumeId] = useState(null);
 
-  // Resume state
   const [resumeText, setResumeText] = useState(() => localStorage.getItem('resumeText') || '');
   const [showResumeInput, setShowResumeInput] = useState(false);
   const [resumeSaved, setResumeSaved] = useState(false);
@@ -35,11 +34,20 @@ const Dashboard = ({ userSkills }) => {
   };
 
   useEffect(() => {
-    if (token) fetchExistingJobs();
+    if (token) {
+      fetchExistingJobs();
+    } else {
+      setError('Please login first. Resume upload and tailoring require authentication.');
+    }
     if (!localStorage.getItem('resumeText')) setShowResumeInput(true);
   }, []);
 
   const handleResumeUpload = async (e) => {
+    if (!token) {
+      setError('Please login first. Resume upload requires authentication.');
+      return;
+    }
+
     const file = e.target.files?.[0] || e.dataTransfer?.files?.[0];
     if (!file || file.type !== 'application/pdf') return setError('Please upload a PDF file.');
 
@@ -99,6 +107,7 @@ const Dashboard = ({ userSkills }) => {
   };
 
   const handleScout = async () => {
+    if (!token) return setError('Please login first. Job scouting requires authentication.');
     if (!targetRole.trim()) return setError('Please enter a target role');
     if (!location.trim()) return setError('Please enter a location');
     setError('');
@@ -124,6 +133,10 @@ const Dashboard = ({ userSkills }) => {
   };
 
   const handleTailor = async (jobId) => {
+    if (!token) {
+      return setError('Please login first. Resume tailoring requires authentication.');
+    }
+
     if (jobId.startsWith('demo-')) {
       return setError('These are demo jobs. Add real API keys to python_ai/.env and restart the Python server.');
     }
@@ -154,7 +167,10 @@ const Dashboard = ({ userSkills }) => {
   const handleDownload = async (resumeId) => {
     try {
       const res = await fetch(`${API_BASE}/resumes/download/${resumeId}`, { headers });
-      if (!res.ok) throw new Error('Download failed');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Download failed');
+      }
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -170,31 +186,30 @@ const Dashboard = ({ userSkills }) => {
   };
 
   return (
-    <div style={{ width: '100%', maxWidth: '900px', margin: '0 auto', padding: '1rem' }}>
+    <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
 
       {/* ---- Resume Paste Panel ---- */}
       <motion.div
-        className="profile-card"
-        style={{ marginBottom: '1.5rem', padding: '1.5rem', border: localStorage.getItem('resumeText') ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(167,139,250,0.25)' }}
+        className={`mb-6 p-6 rounded-2xl bg-slate-900 border ${localStorage.getItem('resumeText') ? 'border-emerald-500/30' : 'border-blue-500/30'}`}
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
       >
         <button
           onClick={() => setShowResumeInput(!showResumeInput)}
-          style={{ background: 'transparent', border: 'none', width: '100%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 0 }}
+          className="w-full flex items-center justify-between text-left focus:outline-none"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ClipboardList size={18} color={localStorage.getItem('resumeText') ? '#10b981' : '#a78bfa'} />
-            <span style={{ color: '#fff', fontWeight: '600', fontSize: '0.95rem' }}>
+          <div className="flex items-center gap-3">
+            <ClipboardList size={20} className={localStorage.getItem('resumeText') ? 'text-emerald-500' : 'text-blue-500'} />
+            <span className="text-white font-semibold flex items-center gap-3">
               Your Resume
+              {localStorage.getItem('resumeText') && (
+                <span className="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                  ✓ Saved
+                </span>
+              )}
             </span>
-            {localStorage.getItem('resumeText') && (
-              <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', fontSize: '0.75rem', padding: '2px 10px', borderRadius: '999px', border: '1px solid rgba(16,185,129,0.3)' }}>
-                ✓ Saved
-              </span>
-            )}
           </div>
-          {showResumeInput ? <ChevronUp size={16} color="#9ca3af" /> : <ChevronDown size={16} color="#9ca3af" />}
+          {showResumeInput ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
         </button>
 
         <AnimatePresence>
@@ -203,19 +218,14 @@ const Dashboard = ({ userSkills }) => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              style={{ overflow: 'hidden' }}
+              className="overflow-hidden mt-4"
             >
-              <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: '1rem 0 0.75rem' }}>
+              <p className="text-slate-400 text-sm mb-4">
                 Upload your PDF resume below. The AI will extract your skills and automatically suggest the best roles.
               </p>
               
               <div 
-                className="upload-zone glass-input"
-                style={{
-                  padding: '2rem', textAlign: 'center', borderStyle: 'dashed', cursor: 'pointer',
-                  marginBottom: '1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.02)',
-                  borderColor: isExtracting ? '#a78bfa' : 'rgba(255,255,255,0.1)'
-                }}
+                className={`p-8 text-center border-2 border-dashed rounded-xl cursor-pointer mb-4 transition-colors ${isExtracting ? 'border-blue-500 bg-blue-500/5' : 'border-slate-700 bg-slate-950/50 hover:border-slate-500 hover:bg-slate-800/50'}`}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={handleResumeUpload}
                 onClick={() => document.getElementById('dashboard-resume-upload').click()}
@@ -224,33 +234,31 @@ const Dashboard = ({ userSkills }) => {
                   id="dashboard-resume-upload" 
                   type="file" 
                   accept="application/pdf" 
-                  style={{ display: 'none' }}
+                  className="hidden"
                   onChange={handleResumeUpload}
                 />
                 
                 {isExtracting ? (
-                  <div style={{ padding: '1rem' }}>
-                    <Loader2 className="animate-spin" size={32} color="#a78bfa" style={{ margin: '0 auto 1rem' }}/>
-                    <p style={{ color: '#a78bfa', fontWeight: '500' }}>AI is analyzing your resume...</p>
+                  <div className="flex flex-col items-center">
+                    <Loader2 className="animate-spin text-blue-500 mb-3" size={32} />
+                    <p className="text-blue-400 font-medium">AI is analyzing your resume...</p>
                   </div>
                 ) : resumeSaved ? (
-                  <div style={{ padding: '1rem' }}>
-                    <CheckCircle size={32} color="#10b981" style={{ margin: '0 auto 1rem' }}/>
-                    <p style={{ color: '#10b981', fontWeight: '500' }}>Resume Saved & Analyzed successfully!</p>
+                  <div className="flex flex-col items-center">
+                    <CheckCircle size={32} className="text-emerald-500 mb-3" />
+                    <p className="text-emerald-400 font-medium">Resume Saved & Analyzed successfully!</p>
                   </div>
                 ) : (
-                  <div style={{ padding: '1rem' }}>
-                    <UploadCloud size={40} color="#a78bfa" style={{ margin: '0 auto 1rem', opacity: 0.8 }}/>
-                    <p style={{ color: '#e2e8f0', fontWeight: '500', marginBottom: '0.25rem' }}>
-                      Click to upload or drag and drop
-                    </p>
-                    <p style={{ color: '#9ca3af', fontSize: '0.8rem' }}>PDF (Max 5MB)</p>
+                  <div className="flex flex-col items-center">
+                    <UploadCloud size={40} className="text-slate-400 mb-3" />
+                    <p className="text-slate-300 font-medium mb-1">Click to upload or drag and drop</p>
+                    <p className="text-slate-500 text-sm">PDF (Max 5MB)</p>
                   </div>
                 )}
               </div>
 
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem', marginTop: '1rem' }}>
-                <p style={{ color: '#9ca3af', fontSize: '0.8rem', marginBottom: '0.5rem' }}>
+              <div className="pt-4 border-t border-slate-800">
+                <p className="text-slate-400 text-xs mb-2">
                   Or paste manually (if your PDF is a scanned image, the parser cannot read it):
                 </p>
                 <textarea
@@ -261,10 +269,7 @@ const Dashboard = ({ userSkills }) => {
                   }}
                   placeholder="Paste raw resume text here..."
                   rows={4}
-                  style={{
-                    width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '8px', padding: '0.75rem', color: '#e2e8f0', fontSize: '0.85rem', outline: 'none'
-                  }}
+                  className="w-full bg-slate-950/50 border border-slate-800 rounded-lg p-3 text-slate-300 text-sm focus:outline-none focus:border-blue-500/50"
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>
@@ -275,39 +280,38 @@ const Dashboard = ({ userSkills }) => {
 
       {/* ---- Scout Search Bar ---- */}
       <motion.div
-        className="profile-card"
-        style={{ marginBottom: '2rem', padding: '2rem' }}
+        className="mb-8 p-6 rounded-2xl bg-slate-900 border border-slate-800"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
-          <Sparkles size={22} color="#a78bfa" />
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#fff' }}>AI Job Scout</h2>
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles size={22} className="text-blue-500" />
+          <h2 className="text-2xl font-bold text-white">AI Job Scout</h2>
         </div>
-        <p style={{ color: '#9ca3af', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+        <p className="text-slate-400 mb-6 text-sm">
           Our AI agent scans the web for the best jobs matching your profile.
         </p>
 
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="flex items-center gap-2 text-slate-300 text-xs font-semibold uppercase tracking-wider mb-2">
               <Briefcase size={14} /> Target Role
             </label>
             <input
-              className="glass-input"
+              className="w-full bg-slate-950/50 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:border-blue-500"
               placeholder="e.g., Full Stack Developer"
               value={targetRole}
               onChange={(e) => setTargetRole(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleScout()}
             />
           </div>
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div>
+            <label className="flex items-center gap-2 text-slate-300 text-xs font-semibold uppercase tracking-wider mb-2">
               <MapPin size={14} /> Location
             </label>
             <input
-              className="glass-input"
+              className="w-full bg-slate-950/50 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:border-blue-500"
               placeholder="e.g., Remote, Bangalore"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
@@ -316,20 +320,17 @@ const Dashboard = ({ userSkills }) => {
           </div>
         </div>
 
-        <motion.button
-          className="btn-primary"
-          style={{ width: '100%', justifyContent: 'center' }}
+        <button
+          className="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3.5 text-base font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={handleScout}
           disabled={scouting}
-          whileHover={{ scale: 1.015 }}
-          whileTap={{ scale: 0.985 }}
         >
           {scouting ? (
-            <><Loader2 className="animate-spin" size={20} style={{ marginRight: '8px' }} /> AI is scanning the web...</>
+            <><Loader2 className="animate-spin" size={20} /> AI is scanning jobs (20-40s)...</>
           ) : (
-            <><Search size={20} style={{ marginRight: '8px' }} /> Scout for Jobs</>
+            <><Search size={20} /> Scout for Jobs</>
           )}
-        </motion.button>
+        </button>
       </motion.div>
 
       {/* ---- Error Banner ---- */}
@@ -339,90 +340,87 @@ const Dashboard = ({ userSkills }) => {
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: '12px', padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: '10px', color: '#fca5a5' }}
+            className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-3 text-red-400"
           >
-            <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
-            <span style={{ flex: 1, fontSize: '0.9rem' }}>{error}</span>
-            <X size={16} style={{ cursor: 'pointer', flexShrink: 0 }} onClick={() => setError('')} />
+            <AlertCircle size={18} className="shrink-0 mt-0.5" />
+            <span className="flex-1 text-sm">{error}</span>
+            <X size={16} className="cursor-pointer shrink-0" onClick={() => setError('')} />
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* ---- Loader ---- */}
       {loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
-          <Loader2 className="animate-spin" size={40} color="#a78bfa" />
+        <div className="flex justify-center p-12">
+          <Loader2 className="animate-spin text-blue-500" size={40} />
         </div>
       )}
 
       {/* ---- Job Cards ---- */}
       {scoutDone && jobs.length > 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <p style={{ color: '#9ca3af', fontSize: '0.9rem', marginBottom: '1rem' }}>
-            Found <strong style={{ color: '#a78bfa' }}>{jobs.length}</strong> jobs — click "Tailor Resume" to generate a customized resume for any role.
+          <p className="text-slate-400 text-sm mb-4">
+            Found <strong className="text-blue-400 px-1">{jobs.length}</strong> jobs — click "Tailor Resume" to generate a customized resume for any role.
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="flex flex-col gap-5">
             {jobs.map((job, index) => (
               <motion.div
                 key={job._id || index}
-                className="profile-card"
-                style={{ padding: '1.75rem' }}
+                className="p-6 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-colors"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.07 }}
+                transition={{ delay: index * 0.05 }}
               >
-                <h3 style={{ fontSize: '1.15rem', color: '#fff', marginBottom: '0.5rem' }}>{job.title}</h3>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', color: '#9ca3af', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Building2 size={13} /> {job.company || 'Unknown'}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={13} /> {job.location || 'N/A'}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Globe size={13} /> {job.scrapedFrom || 'Web'}</span>
+                <h3 className="text-lg font-bold text-white mb-2">{job.title}</h3>
+                <div className="flex flex-wrap gap-4 text-slate-400 text-sm mb-4">
+                  <span className="flex items-center gap-1.5"><Building2 size={14} /> {job.company || 'Unknown'}</span>
+                  <span className="flex items-center gap-1.5"><MapPin size={14} /> {job.location || 'N/A'}</span>
+                  <span className="flex items-center gap-1.5"><Globe size={14} /> {job.scrapedFrom || 'Web'}</span>
                 </div>
 
-                {/* Toggle description */}
                 <button
                   onClick={() => setExpandedJob(expandedJob === job._id ? null : job._id)}
-                  style={{ background: 'transparent', border: 'none', color: '#a78bfa', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.82rem', fontWeight: '600', padding: 0, marginBottom: '0.75rem' }}
+                  className="flex items-center gap-1.5 text-blue-400 text-sm font-semibold mb-4 focus:outline-none hover:text-blue-300"
                 >
-                  {expandedJob === job._id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  {expandedJob === job._id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                   {expandedJob === job._id ? 'Hide Description' : 'Show Description'}
                 </button>
+
                 <AnimatePresence>
                   {expandedJob === job._id && (
-                    <motion.p
+                    <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      style={{ color: '#cbd5e1', fontSize: '0.85rem', lineHeight: '1.7', overflow: 'hidden', marginBottom: '1rem' }}
+                      className="overflow-hidden"
                     >
-                      {job.description?.substring(0, 600) || 'No description available.'}
-                      {job.description?.length > 600 ? '...' : ''}
-                    </motion.p>
+                      <p className="text-slate-300 text-sm leading-relaxed mb-4 p-4 rounded-lg bg-slate-950/50 border border-slate-800/50">
+                        {job.description || 'No description available.'}
+                      </p>
+                    </motion.div>
                   )}
                 </AnimatePresence>
 
-                {/* Actions */}
-                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <motion.button
-                    className="btn-primary"
-                    style={{ padding: '0.6rem 1.2rem', fontSize: '0.875rem', marginTop: 0 }}
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
                     onClick={() => handleTailor(job._id)}
                     disabled={tailoring === job._id}
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
                   >
                     {tailoring === job._id
-                      ? <><Loader2 className="animate-spin" size={15} style={{ marginRight: '6px' }} /> Tailoring (~60s)...</>
-                      : <><FileText size={15} style={{ marginRight: '6px' }} /> Tailor Resume</>
+                      ? <><Loader2 className="animate-spin" size={16} /> Tailoring (~60s)...</>
+                      : <><FileText size={16} /> Tailor Resume</>
                     }
-                  </motion.button>
+                  </button>
 
                   {job.url && (
                     <a
-                      href={job.url} target="_blank" rel="noopener noreferrer"
-                      className="btn-secondary"
-                      style={{ padding: '0.6rem 1.2rem', fontSize: '0.875rem', marginTop: 0, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px', width: 'auto' }}
+                      href={job.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-lg bg-slate-800 border border-slate-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 transition-colors"
                     >
-                      Apply Now <ExternalLink size={13} />
+                      Apply Now <ExternalLink size={14} />
                     </a>
                   )}
                 </div>
@@ -434,9 +432,9 @@ const Dashboard = ({ userSkills }) => {
 
       {/* ---- Empty State ---- */}
       {scoutDone && jobs.length === 0 && !loading && (
-        <div style={{ textAlign: 'center', padding: '3rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}>
-          <AlertCircle size={32} color="#f87171" style={{ marginBottom: '1rem' }} />
-          <p style={{ color: '#9ca3af' }}>No jobs found. Try a different role or location.</p>
+        <div className="text-center p-12 rounded-2xl border border-slate-800 bg-slate-900 border-dashed">
+          <AlertCircle size={32} className="text-slate-500 mx-auto mb-4" />
+          <p className="text-slate-400">No jobs found. Try adjusting your role or location.</p>
         </div>
       )}
 
@@ -448,40 +446,45 @@ const Dashboard = ({ userSkills }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => { setPreviewResume(null); setPreviewResumeId(null); }}
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1.5rem', padding: '2rem', maxWidth: '700px', width: '100%', maxHeight: '80vh', overflow: 'auto', boxShadow: '0 25px 50px rgba(0,0,0,0.6)' }}
+              className="w-full max-w-3xl max-h-[85vh] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ color: '#fff', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CheckCircle size={20} color="#10b981" /> Tailored for: {previewJobTitle}
+              <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-900/50">
+                <h3 className="text-white font-semibold flex items-center gap-2">
+                  <CheckCircle size={20} className="text-emerald-500" /> 
+                  Targeted for: {previewJobTitle}
                 </h3>
-                <X size={20} color="#9ca3af" style={{ cursor: 'pointer' }} onClick={() => { setPreviewResume(null); setPreviewResumeId(null); }} />
+                <button onClick={() => { setPreviewResume(null); setPreviewResumeId(null); }} className="text-slate-400 hover:text-white p-1">
+                  <X size={20} />
+                </button>
               </div>
 
-              <pre style={{ color: '#e2e8f0', fontSize: '0.82rem', lineHeight: '1.7', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: "'Inter', sans-serif", background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '1.5rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-                {previewResume}
-              </pre>
+              <div className="p-6 overflow-y-auto flex-1">
+                <div className="bg-slate-950 rounded-xl border border-slate-800 p-6 whitespace-pre-wrap font-mono text-sm text-slate-300 leading-relaxed">
+                  {previewResume}
+                </div>
+              </div>
 
-              {previewResumeId ? (
-                <motion.button
-                  className="btn-primary"
-                  style={{ width: '100%', justifyContent: 'center', marginTop: '1.5rem' }}
-                  onClick={() => handleDownload(previewResumeId)}
-                  whileHover={{ scale: 1.015 }}
-                >
-                  <Download size={18} style={{ marginRight: '8px' }} /> Download as PDF
-                </motion.button>
-              ) : (
-                <p style={{ color: '#9ca3af', fontSize: '0.8rem', textAlign: 'center', marginTop: '1rem' }}>
-                  PDF download available after logging in.
-                </p>
-              )}
+              <div className="p-6 border-t border-slate-800 bg-slate-900/50">
+                {previewResumeId ? (
+                  <button
+                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-6 py-3.5 text-base font-semibold text-white hover:bg-emerald-700 transition-colors"
+                    onClick={() => handleDownload(previewResumeId)}
+                  >
+                    <Download size={18} /> Download Print-Ready PDF
+                  </button>
+                ) : (
+                  <p className="text-slate-400 text-sm text-center">
+                    PDF download is available after creating an account.
+                  </p>
+                )}
+              </div>
             </motion.div>
           </motion.div>
         )}

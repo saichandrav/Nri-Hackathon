@@ -1,5 +1,9 @@
 fastapi
 uvicorn
-litellm
-exa-py
+openai
 python-dotenv
+python-jobspy; python_version < "3.13"
+requests
+beautifulsoup4
+lxml
+selenium
